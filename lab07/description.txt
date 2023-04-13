@@ -1,1 +1,2 @@
 
+testove zadani. vypis vlastniho jmena na LCD display.
