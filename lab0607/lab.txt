@@ -1,0 +1,88 @@
+.cseg ; nasledujici umistit do pameti programu (implicitni)
+; Zacatek programu - po resetu
+.org 0
+    jmp start
+.include "printlib.inc"
+
+.org 0x100
+delka: .db 6 ; definice read-only konstanty v pameti programu (jeden bajt s hodnotou 6) 1
+retez: .db "KIRILL SHIBANOV NECHCE ZKOUSKU",0 ; retezec zakonceny nulou (nikoli znakem "0") 1
+
+start:
+    call init_disp
+    ldi r30, low(2*retez)
+    ldi r31, high(2*retez)
+    
+    ldi r22, 79
+    mov r17, r22
+    
+cycle:
+    lpm r16, Z+
+    jmp check_overflow
+    after_check:
+    cpi r16, 0
+    breq reset_hard
+    
+continue:
+    call show_char
+    mov r17, r23
+    jmp continue_print2
+    
+continue_print:
+    call show_char
+    
+continue_print2:
+    inc r17
+    cpi r17, 16
+    breq reset
+    
+    cpi r16, 0
+    breq reset
+    
+    jmp cycle
+    
+check_overflow:
+    mov r23, r17
+    ;andi r23, 0xF0
+    ;cpi r23, 0xF0
+    ;brne continue_print
+    cpi r23 , 64
+    brsh continue_print
+    
+    mov r23, r17
+    ;andi r17, 0x0F
+    ;ori r17, 0x40
+    ;cpi r17, 0x40
+    ;brne continue
+    andi r17, 0x0F
+    ;ori r17, 0x04
+    cpi r17, 0x04
+    brne continue
+    
+    jmp after_check
+
+waiting: 
+    ldi r19, 20 ; wait code (100 * 80)
+    cek2: ldi r18, 2
+    cek: dec r18
+    brne cek
+    dec r20
+    brne cek2
+    jmp after_waiting
+  
+reset:
+    dec r22
+    mov r17, r22
+    jmp waiting
+    after_waiting:
+    ldi r30, low(2*retez)
+    ldi r31, high(2*retez)
+    jmp cycle
+
+reset_hard:
+    call show_char
+    ldi r22, 79
+    mov r17, r22
+    jmp cycle
+    
+end: jmp end
