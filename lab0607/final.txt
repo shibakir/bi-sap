@@ -1,0 +1,87 @@
+.cseg ; nasledujici umistit do pameti programu (implicitni)
+; Zacatek programu - po resetu
+.org 0
+    jmp start
+.include "printlib.inc"
+    
+; Zacatek programu - hlavni program
+.org 0x100
+;delka: .db 6; definice read-only konstanty v pameti programu (jeden bajt s hodnotou 6) 1
+retez: .db "KIRILL SHIBANOV CHCE BODY ZA JEZDICI NAPIS A BONUS",0 ; retezec zakonceny nulou (nikoli znakem "0") 1
+
+start:
+    ldi r21 , 79
+    ldi r16 , 0
+    mov r17 , r21 /////////////
+    call init_disp
+
+after_start:
+    ldi r30 , low(2*retez)
+    ldi r31 , high(2*retez)
+    mov r17 , r21
+    
+get_next:
+    lpm r16 , Z+
+    
+    cpi r17 , 16 // check n clear other
+    brne continue
+    ldi r17 , 64
+continue:
+    
+    cpi r17 , 80
+    brsh no_print
+    
+    cpi r21 , 0
+    brlo no_print
+    
+    cpi r16 , 0
+    brne heree
+    ldi r16 , 32
+    call show_char
+    ldi r16 , 0
+    jmp no_print
+heree:
+    
+    call show_char
+no_print:
+    inc r17
+    
+    jmp waiting // waiting
+    after_waiting:
+    
+    // cpi r21 , -5 ; check end of up screen line 
+    // breq up_line_end
+    cpi r21 , 205; vim, ze je to blbost , ale funguje to
+    breq up_line_end
+    ;cpi r17 , 0
+    ;breq up_line_end
+	
+    cpi r16 , 0 ; check end of string 
+    brne get_next
+    
+    ldi r30 , low(2*retez)
+    ldi r31 , high(2*retez)
+    //////////////////////
+    dec r21
+    mov r17 , r21
+
+    cpi r21 , 64 ; check end of lower line
+    brne get_next
+    ldi r21 , 15 ; ale equal 
+    mov r17 , r21
+    jmp get_next
+    
+up_line_end:
+    ldi r21 , 79
+    jmp after_start
+    
+waiting: 
+    ldi r19, 100 ; wait code (100 * 80)
+    cek2: ldi r18, 60
+    cek: dec r18
+    brne cek
+    dec r20
+    brne cek2
+    jmp after_waiting
+    
+end: jmp end
