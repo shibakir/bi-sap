@@ -11,11 +11,7 @@ retez: .db "KIRILL SHIBANOV CHCE BODY ZA JEZDICI NAPIS A BONUS",0 ; retezec zako
 
 start:
     ldi r21 , 79
-    ldi r16 , 0
-    mov r17 , r21 /////////////
     call init_disp
-
-after_start:
     ldi r30 , low(2*retez)
     ldi r31 , high(2*retez)
     mov r17 , r21
@@ -28,7 +24,7 @@ get_next:
     ldi r17 , 64
 continue:
     
-    cpi r17 , 80
+    cpi r17 , 80 // no need to print
     brsh no_print
     
     cpi r21 , 0
@@ -49,19 +45,15 @@ no_print:
     jmp waiting // waiting
     after_waiting:
     
-    // cpi r21 , -5 ; check end of up screen line 
-    // breq up_line_end
     cpi r21 , 205; vim, ze je to blbost , ale funguje to
-    breq up_line_end
-    ;cpi r17 , 0
-    ;breq up_line_end
-	
+    breq start
+
     cpi r16 , 0 ; check end of string 
     brne get_next
     
     ldi r30 , low(2*retez)
     ldi r31 , high(2*retez)
-    //////////////////////
+
     dec r21
     mov r17 , r21
 
@@ -70,11 +62,7 @@ no_print:
     ldi r21 , 15 ; ale equal 
     mov r17 , r21
     jmp get_next
-    
-up_line_end:
-    ldi r21 , 79
-    jmp after_start
-    
+
 waiting: 
     ldi r19, 100 ; wait code (100 * 80)
     cek2: ldi r18, 60
