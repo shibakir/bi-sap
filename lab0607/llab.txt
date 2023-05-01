@@ -6,50 +6,62 @@
     
 ; Zacatek programu - hlavni program
 .org 0x100
-delka: .db 6; definice read-only konstanty v pameti programu (jeden bajt s hodnotou 6) 1
+;delka: .db 6; definice read-only konstanty v pameti programu (jeden bajt s hodnotou 6) 1
 ; retez: .db "KIRILL SHIBANOV CHCE BODY ZA JEZDICI NAPIS A BONUS",0 ; retezec zakonceny nulou (nikoli znakem "0") 1
 retez: .db "KOKO",0 ;
 
 start:
     ldi r21 , 79
+    mov r17 , r21 /////////////
     call init_disp
 
 after_start:
     ldi r30 , low(2*retez)
     ldi r31 , high(2*retez)
-
     mov r17 , r21
     
 get_next:
     lpm r16 , Z+
+    
+    cpi r17 , 0x10 // check n clear other
+    brne continue
+    ldi r17 , 0x40
+continue:
+    
+    cpi r17 , 79 // check n clear other
+    brne continue_2
+    ldi r17 , 0
+continue_2:  
     call show_char
     inc r17
-
-    jmp waiting
+    
+    jmp waiting // waiting
     after_waiting:
     
-    cpi r21 , 59 ; check end of the bottom screen line 
-    brne here
-    jmp botom_line_end
-
-here:
-    cpi r21 , -5 ; check end of up screen line 
-    brne heree
-    jmp up_line_end
-    
-heree:
+    // cpi r21 , -5 ; check end of up screen line 
+    // breq up_line_end
+    cpi r17 , 0
+    breq up_line_end
+	
     cpi r16 , 0 ; check end of string 
     brne get_next
+    
     ldi r30 , low(2*retez)
     ldi r31 , high(2*retez)
+    //////////////////////
     dec r21
     mov r17 , r21
-    jmp get_next
     
-
-botom_line_end:
-    ldi r21 , 15
-    jmp after_start
+    cpi r21 , 0 ; check end of lower line
+    brne heree
+    ldi r21 , 0x4F ; ale equal 
+heree: 
+    cpi r21 , 0x3F ; check end of lower line
+    brne get_next
+    ldi r21 , 0x0F ; ale equal 
+    ///////////////////////
+    mov r17 , r21
+    jmp get_next
     
 up_line_end:
     ldi r21 , 79
@@ -64,77 +76,4 @@ waiting:
     brne cek2
     jmp after_waiting
     
-end: jmp end
-
-
-.cseg ; nasledujici umistit do pameti programu (implicitni)
-; Zacatek programu - po resetu
-.org 0
-    jmp start
-.include "printlib.inc"
-
-.org 0x100
-delka: .db 6 ; definice read-only konstanty v pameti programu (jeden bajt s hodnotou 6) 1
-retez: .db "KIRILL SHIBANOV CHCE BODY ZA JEZDICI NAPIS A ODEVZDAT SEMESTRALKU Z BI-DBS.21",0 ; retezec zakonceny nulou (nikoli znakem "0") 1
-
-
-start:
-    call init_disp
-    ldi r30, low(2*retez)
-    ldi r31, high(2*retez)
-    ldi r22, 15
-    mov r17, r22
-    
-cycle:
-    lpm r16, Z+
-    
-    ; check if it in interval 255
-    mov r23, r17
-    andi r23, 0xF0
-    cpi r23, 0xF0
-    brne continue_print
-    mov r23, r17
-    andi r17, 0x0F
-    ori r17, 0x40
-    cpi r17, 0x40
-    brne continue
-    cpi r16, 0
-    brne continue
-    call show_char
-    ldi r22, 15
-    mov r17, r22
-    jmp cycle
-
-
-continue:
-    call show_char
-    mov r17, r23
-    jmp continue_print2
-    
-    
-continue_print:
-    call show_char
-continue_print2:
-    inc r17
-    cpi r17, 16
-    breq wait_reset_r16
-    cpi r16, 0
-    breq wait_reset_r16
-    jmp cycle
-    
-    
-wait_reset_r16:
-    dec r22
-    mov r17, r22
-    ;===============================
-    ldi r21, 100
-    cek2: ldi r20, 120
-    cek: dec r20
-    brne cek
-    dec r21
-    brne cek2
-    ;===============================
-    ldi r30, low(2*retez)
-    ldi r31, high(2*retez)
-    jmp cycle
 end: jmp end
