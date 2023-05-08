@@ -6,68 +6,11 @@
     
 ; Zacatek programu - hlavni program
 .org 0x100
- 
+
 start:
     call init_disp
     
-    call init_button
-    ;call waiting
-    
-    ;in r17, DDRB
-    ;andi r17, 0b00101111
-    ;in r16, PORTB
-    ;ori r16, 0b11010000
-    ;out DDRB, r17
-    ;out PORTB, r16
-    
-; vyčkání na dokončení převodu
-loop:
-    call showkek
-    call waiting
-    lds r16, ADCSRA ; načtení hodnoty z adresy ADCSRA
-    sbrs r16, ADSC ; otestování bitu ADSC
-    rjmp loop ; pokud není na log. 0, tak načítáme znovu
-
-; načtení výsledku
-ldi r16, ADCH ; načtení horní části výsledku
-andi r16, 0xF0 ; zbavení se spodních 4 bitů
-
-cpi r16, 0x80 ; porovnání s hodnotou pro tlačítko A
-breq showlol ; skok na obsluhu tlačítka A, pokud je hodnota shodná
-cpi r16, 0x40 ; porovnání s hodnotou pro tlačítko B
-breq showlol ; skok na obsluhu tlačítka B, pokud je hodnota shodná
-cpi r16, 0x20 ; porovnání s hodnotou pro tlačítko C
-breq showlol ; skok na obsluhu tlačítka C, pokud je hodnota shodná
-cpi r16, 0x10 ; porovnání s hodnotou pro tlačítko D
-breq showlol ; skok na obsluhu tlačítka D, pokud je hodnota shodná
-
-; pokud se hodnota neshoduje s žádným tlačítkem, tak se program vrátí sem
-rjmp loop    
-    
-    ;call showkek
-
-;loop: ; ждём на нажатие, если да, то jmp	
-    ;call waiting
-    ;call showkek
-    ;SBIS PINB , 4 ; kontroluje ci je 4 pin z portb 0 (pressed), ak nie skip dalsiu instruction
-    ;rjmp firstchar // condition jump
-    
-    ;rjmp loop
-    
-;firstchar: ; kontrolovanie pressnuteho buttonu -> ak pressed, ist na second char, ak nie, zvacsovat cislo o 1, pokial 9 ==> spat na 1   
-;    call showlol
-;    call loop
-    
-waiting: 
-    ldi r19, 100 ; wait code (100 * 80)
-    cek2: ldi r18, 60
-    cek: dec r18
-    brne cek
-    dec r20
-    brne cek2
-    ret
-    
-init_button:
+;   init_button:
     push r16
     ; povoleni AD prevodniku (nastaveni bitu ADEN v pameti na adrese ADCSRA bez ovlivneni ostatnich bitu) 1
     lds r16, ADCSRA
@@ -77,75 +20,93 @@ init_button:
     ; nastaveni zarovnani vystupu vlevo (1<<ADLAR); 3
     ldi r16, (0b01<<REFS0) | (1<<ADLAR); 4
     sts ADMUX, r16
-
     pop r16
+    ;ret
+    ldi r16, '0'
+
+read_button:
+    lds r16, ADCSRA        ; load ADCSRA address into r16
+    ori r16, (1<<ADSC)     ; start ADC conversion by setting ADSC bit
+    sts ADCSRA, r16        ; store r16 back to ADCSRA
+
+adcsra_loop:
+    lds r16, ADCSRA    ; load ADCSRA into r16
+    andi r16, (1<<ADSC) ; mask out all but the ADSC bit
+    breq adcsra_done   ; if ADSC bit is clear, conversion is done
+    rjmp adcsra_loop   ; otherwise, keep waiting
+    
+adcsra_done:
+    
+    call showkek
+    call waiting
+    
+    lds r16, ADCH          ; load ADCH into r16
+    andi r16, 0b11110000   ; mask out the bottom 4 bits
+   
+    cpi r16, 0b10010000 ; compare with Select button value
+    breq select_pressed   ; if equal, jump to select_pressed
+    cpi r16, 0b01100000  ; compare with Left button value
+    breq left_pressed      ; if equal, jump to left_pressed
+    cpi r16, 0b00110000  ; compare with Down button value
+    breq down_pressed      ; if equal, jump to down_pressed
+    cpi r16, 0b00010000    ; compare with Up button value
+    breq up_pressed        ; if equal, jump to up_pressed
+    cpi r16, 0b00000000 ; compare with Right button value
+    breq right_pressed     ; if equal, jump to right_pressed
+    rjmp no_button_pressed ; otherwise, no button is pressed
+
+waiting: 
+    ldi r19, 100 ; wait code (100 * 80)
+    cek2: ldi r18, 60
+    cek: dec r18
+    brne cek
+    dec r20
+    brne cek2
     ret
 
 showkek:
-    
-    call clearscreen
+
     call waiting
-    
-    ldi r16, 'K'
+    ;ldi r16, '1'
     ldi r17, 1
     call show_char
-
-    ldi r16, 'E'
-    ldi r17, 2
-    call show_char
-
-    ldi r16, 'K'
-    ldi r17, 3
-    call show_char
-
     ret
 
-showlol:
-    
-    call clearscreen
-    call waiting
-    
+select_pressed:
+    ; do something when Select button is pressed
+    ldi r16, 'S'
+    call showkek
+    rjmp read_button
+
+left_pressed:
+    ; do something when Left button is pressed
     ldi r16, 'L'
-    ldi r17, 1
-    call show_char
+    call showkek
+    rjmp read_button
 
-    ldi r16, 'O'
-    ldi r17, 2
-    call show_char
+down_pressed:
+    ; do something when Down button is pressed
+    ldi r16, 'D'
+    call showkek
+    rjmp read_button
 
-    ldi r16, 'L'
-    ldi r17, 3
-    call show_char
+up_pressed:
+    ; do something when Up button is pressed
+    ldi r16, 'U'
+    call showkek
+    rjmp read_button
 
-    ret
+right_pressed:
+    ; do something when Right button is pressed
+    ldi r16, 'R'
+    call showkek
+    rjmp read_button
 
-clearscreen: // clear all
-
-    ldi r16, ' '	
-    ldi r17, 2      
-    call show_char  
-
-    ldi r16, ' '	
-    ldi r17, 3      
-    call show_char  
-
-    ldi r16, ' '
-    ldi r17, 4     
-    call show_char  
-
-    ldi r16, ' '	
-    ldi r17, 5      
-    call show_char  
-
-    ldi r16, ' '	
-    ldi r17, 6      
-    call show_char  
-
-    ldi r16, ' '	
-    ldi r17, 7      
-    call show_char 
-    ret 
-    
+no_button_pressed:
+    ; do something when no button is pressed
+    ldi r16, '-'
+    call showkek
+    rjmp read_button
 
     
 end: jmp end
