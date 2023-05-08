@@ -1,14 +1,35 @@
-.cseg ; nasledujici umistit do pameti programu (implicitni)
+.dseg                ; prepnuti do pameti dat 1
+.org 0x100           ; od adresy 0x100 (adresy 0 - 0x100 nepouzivejte)
+
+flag: .byte 1        ; rezervovani mista pro 1 bajt
+
+.cseg                ; prepnuti do pameti programu
+; podprogramy pro praci s displejem
+.org 0x1000
+.include "printlib.inc"
+
 ; Zacatek programu - po resetu
 .org 0
-    jmp start
-.include "printlib.inc"
-    
-; Zacatek programu - hlavni program
+    jmp	start
+.org 0x16            ; 2
+    jmp interrupt
+
 .org 0x100
 
 start:
     call init_disp
+    call init_int
+    
+    /////////////////////////////////////
+    ldi r16, 0       ; 3
+    sts flag, r16
+
+    ldi r17, 0
+    // ldi r16, '0'
+    // call show_char
+    /////////////////////////////////////
+    
+    call show_start
     
 ;   init_button:
     push r16
@@ -57,10 +78,10 @@ adcsra_done:
 
 waiting: 
     ldi r19, 100 ; wait code (100 * 80)
-    cek2: ldi r18, 60
+    cek2: ldi r18, 200
     cek: dec r18
     brne cek
-    dec r20
+   ; dec r20
     brne cek2
     ret
 
@@ -76,7 +97,8 @@ select_pressed:
     ; do something when Select button is pressed
     ldi r16, 'S'
     call showkek
-    rjmp read_button
+    ;rjmp read_button
+    rjmp timer_loop
 
 left_pressed:
     ; do something when Left button is pressed
@@ -108,5 +130,85 @@ no_button_pressed:
     call showkek
     rjmp read_button
 
+interrupt:           ; 6
+    ; uklid registru a SREG
+    push r16
+    in r16, SREG
+    push r16
+    ;nastav flag
+    ldi r16, 1
+    sts flag, r16
+    ; obnoveni SREG a registru
+    pop r16
+    out SREG, r16
+    pop r16
+    reti             ; 7
+    
+init_int:
+    push r16
+    cli ; globalni zakazani preruseni
+    clr r16
+    sts TCNT1H, r16         ; 1 2
+    sts TCNT1L, r16         ; 1 2
+    ldi r16, (1<<OCIE1A)    ; 2 3
+    sts TIMSK1, r16         ; 2
+    ldi r16, (1<<WGM12) | (0b101<<CS10) ; 2 5
+    sts TCCR1B, r16         ; 2
+    ldi r16, 61
+    sts OCR1AH, r16         ; 2
+    ldi r16, 8
+    sts OCR1AL, r16         ; 2
+    ; zakazani preruseni od tlacitek
+    clr r16
+    out EIMSK, r16          ; 2
+    sei ; globalni povoleni preruseni
+    pop r16
+    ret
+    
+timer_loop:
+    lds r20, flag
+    cpi r20, 0       ; nacteni a otestovani hodnoty flag-u
+    brne timer_loop   ; pokud neni flag -> navrat na zacatek
+                     ; je flag
+    ldi r20, 0       ; vycisteni flag-u
+    sts flag, r20
+
+    ; akce provedena 1x za sekundu 4
+    call waiting
+    inc r16
+
+    cpi r16 , 'z'
+    brne skip
+    ldi r16 , 'a'
+    
+    skip:
+    
+    call show_char
+    call waiting
+
+    jmp timer_loop
+    ;jmp start
+    
+show_start:
+    ldi r16, 'S'	
+    ldi r17, 0      
+    call show_char
+
+    ldi r16, 'T'
+    ldi r17, 1    
+    call show_char 
+
+    ldi r16, 'A'	
+    ldi r17, 2    
+    call show_char 
+
+    ldi r16, 'R'	
+    ldi r17, 3      
+    call show_char  
+
+    ldi r16, 'T'	
+    ldi r17, 4     
+    call show_char 
+    ret
     
 end: jmp end
