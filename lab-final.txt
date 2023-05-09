@@ -17,198 +17,99 @@ flag: .byte 1        ; rezervovani mista pro 1 bajt
 .org 0x100
 
 start:
+    ; Inicializace displeje
     call init_disp
+    ; Inicializace preruseni od casovace
     call init_int
+
+    ldi r18, 0       ; 3
+    sts flag, r18
+
+    ; ldi r17, 0
+    ; ldi r18, '0'
+    ; call show_char
     
-    /////////////////////////////////////
-    ldi r16, 0       ; 3
-    sts flag, r16
+    // timers 
+    // r19 , 0 // dec sec
+    // r20 , 0 // sec
+    // r21 , 0 // minutes
 
-    ldi r17, 0
-    // ldi r16, '0'
-    // call show_char
-    /////////////////////////////////////
-    
-    call show_start
-    
-;   init_button:
-    push r16
-    ; povoleni AD prevodniku (nastaveni bitu ADEN v pameti na adrese ADCSRA bez ovlivneni ostatnich bitu) 1
-    lds r16, ADCSRA
-    ori r16, (1<<ADEN); 2
-    sts ADCSRA, r16
-    ; nastaveni referencniho napeti (0b01<<REFS0)
-    ; nastaveni zarovnani vystupu vlevo (1<<ADLAR); 3
-    ldi r16, (0b01<<REFS0) | (1<<ADLAR); 4
-    sts ADMUX, r16
-    pop r16
-    ;ret
-    ldi r16, '0'
-
-read_button:
-    lds r16, ADCSRA        ; load ADCSRA address into r16
-    ori r16, (1<<ADSC)     ; start ADC conversion by setting ADSC bit
-    sts ADCSRA, r16        ; store r16 back to ADCSRA
-
-adcsra_loop:
-    lds r16, ADCSRA    ; load ADCSRA into r16
-    andi r16, (1<<ADSC) ; mask out all but the ADSC bit
-    breq adcsra_done   ; if ADSC bit is clear, conversion is done
-    rjmp adcsra_loop   ; otherwise, keep waiting
-    
-adcsra_done:
-    
-    call showkek
-    call waiting
-    
-    lds r16, ADCH          ; load ADCH into r16
-    andi r16, 0b11110000   ; mask out the bottom 4 bits
-   
-    cpi r16, 0b10010000 ; compare with Select button value
-    breq select_pressed   ; if equal, jump to select_pressed
-    cpi r16, 0b01100000  ; compare with Left button value
-    breq left_pressed      ; if equal, jump to left_pressed
-    cpi r16, 0b00110000  ; compare with Down button value
-    breq down_pressed      ; if equal, jump to down_pressed
-    cpi r16, 0b00010000    ; compare with Up button value
-    breq up_pressed        ; if equal, jump to up_pressed
-    cpi r16, 0b00000000 ; compare with Right button value
-    breq right_pressed     ; if equal, jump to right_pressed
-    rjmp no_button_pressed ; otherwise, no button is pressed
-
-waiting: 
-    ldi r19, 100 ; wait code (100 * 80)
-    cek2: ldi r18, 200
-    cek: dec r18
-    brne cek
-   ; dec r20
-    brne cek2
-    ret
-
-showkek:
-
-    call waiting
-    ;ldi r16, '1'
-    ldi r17, 1
-    call show_char
-    ret
-
-select_pressed:
-    ; do something when Select button is pressed
-    ldi r16, 'S'
-    call showkek
-    ;rjmp read_button
-    rjmp timer_loop
-
-left_pressed:
-    ; do something when Left button is pressed
-    ldi r16, 'L'
-    call showkek
-    rjmp read_button
-
-down_pressed:
-    ; do something when Down button is pressed
-    ldi r16, 'D'
-    call showkek
-    rjmp read_button
-
-up_pressed:
-    ; do something when Up button is pressed
-    ldi r16, 'U'
-    call showkek
-    rjmp read_button
-
-right_pressed:
-    ; do something when Right button is pressed
-    ldi r16, 'R'
-    call showkek
-    rjmp read_button
-
-no_button_pressed:
-    ; do something when no button is pressed
-    ldi r16, '-'
-    call showkek
-    rjmp read_button
-
-interrupt:           ; 6
-    ; uklid registru a SREG
-    push r16
-    in r16, SREG
-    push r16
-    ;nastav flag
-    ldi r16, 1
-    sts flag, r16
-    ; obnoveni SREG a registru
-    pop r16
-    out SREG, r16
-    pop r16
-    reti             ; 7
-    
-init_int:
-    push r16
-    cli ; globalni zakazani preruseni
-    clr r16
-    sts TCNT1H, r16         ; 1 2
-    sts TCNT1L, r16         ; 1 2
-    ldi r16, (1<<OCIE1A)    ; 2 3
-    sts TIMSK1, r16         ; 2
-    ldi r16, (1<<WGM12) | (0b101<<CS10) ; 2 5
-    sts TCCR1B, r16         ; 2
-    ldi r16, 61
-    sts OCR1AH, r16         ; 2
-    ldi r16, 8
-    sts OCR1AL, r16         ; 2
-    ; zakazani preruseni od tlacitek
-    clr r16
-    out EIMSK, r16          ; 2
-    sei ; globalni povoleni preruseni
-    pop r16
-    ret
-    
-timer_loop:
+main_loop:
     lds r20, flag
     cpi r20, 0       ; nacteni a otestovani hodnoty flag-u
-    brne timer_loop   ; pokud neni flag -> navrat na zacatek
+    breq main_loop   ; pokud neni flag -> navrat na zacatek
                      ; je flag
     ldi r20, 0       ; vycisteni flag-u
     sts flag, r20
 
     ; akce provedena 1x za sekundu 4
-    call waiting
-    inc r16
-
-    cpi r16 , 'z'
-    brne skip
-    ldi r16 , 'a'
-    
-    skip:
-    
+    inc r18
+    mov r16 , r18
     call show_char
-    call waiting
-
-    jmp timer_loop
-    ;jmp start
     
-show_start:
-    ldi r16, 'S'	
-    ldi r17, 0      
-    call show_char
+    // mov r19 , r18
+    
 
-    ldi r16, 'T'
-    ldi r17, 1    
-    call show_char 
+    jmp main_loop
 
-    ldi r16, 'A'	
-    ldi r17, 2    
-    call show_char 
-
-    ldi r16, 'R'	
-    ldi r17, 3      
-    call show_char  
-
-    ldi r16, 'T'	
-    ldi r17, 4     
-    call show_char 
-    ret
     
 end: jmp end
+
+init_int:            ; 5
+    push r18
+    cli ; globalni zakazani preruseni
+
+    ; vycisteni aktualni hodnoty citace TCNT1 (aby prvni sekunda nezacala nekde "od pulky")
+    clr r18
+    ; Neprehazujte poradi nahravani TCNT1H a TCNT1L - hodnota by se nemusela spravne ulozit!
+    sts TCNT1H, r18
+    sts TCNT1L, r18
+
+    ; povoleni preruseni ve chvili, kdy citac TCNT1 dosahne hodnoty OCR1A
+    ldi r18, (1<<OCIE1A)
+    sts TIMSK1, r18
+
+    ; nastaveni cisteni citace TCNT1 ve chvili, kdy dosahne hodnoty OCR1A (1<<WGM12)
+    ; nastaveni preddelicky na 1024 (0b101<<CS10 - bity CS12, CS11 a CS10 jsou za sebou)
+    ldi r18, (1<<WGM12) | (0b001<<CS10)
+    sts TCCR1B, r18
+
+    ; nastaveni OCR1A, tj. vysledne frekvence preruseni
+    ; frekvence preruseni = frekvence cipu 328P / preddelicka / (OCR1A+1)
+    ; frekvence cipu 328P je 16 MHz, tj. 16000000
+    ; preddelicka je nastavena na 1024
+    ; frekvenci preruseni chceme na 1 Hz
+    ; OCR1A = (frekvence cipu 328P / preddelicka / frekvence preruseni) - 1
+    ; OCR1A = (16000000 / 1024 / 1) - 1
+    ; OCR1A = 15624
+    ; 16bitovou hodnotu je treba nastavit do dvou registru OCR1AH:OCR1AL
+    ; 15624 = 61 * 256 + 8
+    ; Neprehazujte poradi nahravani OCR1AH a OCR1AL - hodnota by se nemusela spravne ulozit!
+    ldi r18, 61
+    sts OCR1AH, r18
+    ldi r18, 8
+    sts OCR1AL, r18
+
+    ; zakazani preruseni od tlacitek
+    clr r18
+    out EIMSK, r18
+
+    sei ; globalni povoleni preruseni
+    pop r18
+    ret
+
+interrupt:           ; 6
+    ; uklid registru a SREG
+    push r18
+    in r18, SREG
+    push r18
+
+    ; nastav flag
+    ldi r18, 1
+    sts flag, r18
+
+    ; obnoveni SREG a registru
+    pop r18
+    out SREG, r18
+    pop r18
+    reti             ; 7
