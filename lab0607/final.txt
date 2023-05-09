@@ -42,8 +42,7 @@ heree:
 no_print:
     inc r17
     
-    jmp waiting // waiting
-    after_waiting:
+    call waiting // waiting
     
     cpi r21 , 205; vim, ze je to blbost , ale funguje to
     breq start
@@ -65,11 +64,11 @@ no_print:
 
 waiting: 
     ldi r19, 100 ; wait code (100 * 80)
-    cek2: ldi r18, 60
+    cek2: ldi r18, 80
     cek: dec r18
     brne cek
     dec r20
     brne cek2
-    jmp after_waiting
+    ret
     
 end: jmp end
