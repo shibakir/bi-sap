@@ -26,16 +26,32 @@ start:
     
     //////////////////////////////
     
+    call print_stopky
+    
+    soft_reset:
+    
+    call print_default
+    
     ldi r18, 0       ; 3
     sts flag, r18
 
     ldi r17, 0
-    //ldi r16, '0'
+    // ldi r16, '0'
     ldi r18, '0'
-    //call show_char
+    // call show_char
+    //////////////////////////////
+    // ldi r22 , 0 
+    // ldi r23 , '0' // seconds
+    ldi r23 , '0' // nanosec 
+    ldi r24 , '0' // nanosec 10
     
-    ldi r22 , 0
-    ldi r23 , 0
+    ldi r25 , '0' // seconds
+    ldi r26 , '0' // seconds 10
+    
+    ldi r27 , '0' // minutes
+    ldi r28 , '0' // minutes 10
+    
+    ldi r29 , 0 // start-stop
 	
 main_loop:
     
@@ -50,7 +66,6 @@ loop:
     breq button_pressed
 
     continue:
-    ////////////////////////////////
     
     lds r20, flag
     cpi r20, 0       ; nacteni a otestovani hodnoty flag-u
@@ -60,25 +75,25 @@ loop:
     sts flag, r20
 
     ; akce provedena 1x za sekundu 4
+    ////////////////////////////////
     
+    cpi r29 , 1 // check state
+    brne no_timer
     
     inc r18
-    mov r16 , r18 
+    mov r23 , r18
     
-    call show_char
+    no_timer:
+    
+    call check_time
 
+    call show_time
+    
+    ////////////////////////////////
     jmp main_loop
 
 end: jmp end
-    
-print_data:
-    mov r16 , r22
-    ldi r17 , 3
-    call show_char
-    
-    ldi r24 , '0'
-    add r16 , r24
-    
+
 button_pressed:
     
     lds r21 , ADCH
@@ -96,31 +111,229 @@ button_pressed:
     jmp continue // loop
     
 select_pressed:
-    mov r22 , r16
-    ldi r16 , '1'
-    ldi r17 , 5
-    call show_char
-    mov r16 , r22
-    ldi r17, 0
-    jmp continue
+
+    jmp soft_reset // soft reset
+    
 left_pressed:
-    mov r22 , r16
-    ldi r16 , '2'
-    ldi r17 , 5
-    call show_char
-    mov r16 , r22
-    ldi r17, 0
-    jmp continue
+   
+    ldi r29 , 0 // set stop !
+    call print_stop
+    
+    jmp main_loop
+    
 right_pressed:
-    mov r22 , r16
-    ldi r16 , '3'
-    ldi r17 , 5
-    call show_char
-    mov r16 , r22
-    ldi r17, 0
-    jmp continue
+
+    ldi r29 , 1 // set start !
+    call print_play
+    
+    jmp main_loop
     
 ////////////////////////////////////////////////////////
+
+check_time:
+    
+    cpi r18 , 58 // nanosec greater than '9'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    ldi r18 , '0' // restart nanosec 
+    inc r24 // update nanosec *10 ++
+    
+    cpi r24 , 58 // nanosec *10 greater than '9'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    ldi r24 , '0' // restart nanosec *10
+    ldi r23 , '0'
+    inc r25 // update seconds ++
+    /////////////////////////
+    
+    cpi r25 , 58 // seconds greater than '9'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    ldi r25 , '0' // restart seconds 
+    inc r26 // update seconds *10 ++
+    
+    cpi r26 , 54 // seconds *10 greater than '5'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    ldi r25 , '0' // restart nanosec *10
+    ldi r26 , '0'
+    inc r27 // update seconds ++
+    /////////////////////////
+    
+    cpi r27 , 58 // minute greater than '9'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    ldi r27 , '0'
+    inc r28 // update minutes ++
+    
+    cpi r28 , 54 // minute *10 greater than '5'+1
+    brne no_zerouing_nanosec // dont need update
+    
+    jmp start
+    
+    no_zerouing_nanosec:
+    ret
+    
+show_time:
+    mov r22 , r16
+    ////////////////
+    mov r16 , r18
+    ldi r17 , 7
+    call show_char
+    
+    mov r16 , r24
+    ldi r17 , 6
+    call show_char
+    
+    ldi r16 , ':'
+    ldi r17 , 5
+    call show_char
+    
+    mov r16 , r25
+    ldi r17 , 4
+    call show_char
+    
+    mov r16 , r26
+    ldi r17 , 3
+    call show_char
+    
+    ldi r16 , ':'
+    ldi r17 , 2
+    call show_char
+    
+    mov r16 , r27
+    ldi r17 , 1
+    call show_char
+    
+    mov r16 , r28
+    ldi r17 , 0
+    call show_char
+    
+    ////////////////
+    mov r16 , r22 // get back
+    ldi r17, 0
+    
+    ret
+    
+print_stopky:
+    
+    mov r22 , r16
+    ////////////////
+    ldi r16 , 's'
+    ldi r17 , 74
+    call show_char
+    
+    ldi r16 , 't'
+    ldi r17 , 75
+    call show_char
+    
+    ldi r16 , 'o'
+    ldi r17 , 76
+    call show_char
+    
+    ldi r16 , 'p'
+    ldi r17 , 77
+    call show_char
+    
+    ldi r16 , 'k'
+    ldi r17 , 78
+    call show_char
+    
+    ldi r16 , 'y'
+    ldi r17 , 79
+    call show_char
+
+    ////////////////
+    mov r16 , r22 // get back
+    ldi r17, 0
+    ret
+    
+print_default:
+    
+    mov r22 , r16
+    ////////////////
+    ldi r16 , 's'
+    ldi r17 , 64
+    call show_char
+    
+    ldi r16 , 't'
+    ldi r17 , 65
+    call show_char
+    
+    ldi r16 , 'a'
+    ldi r17 , 66
+    call show_char
+    
+    ldi r16 , 'r'
+    ldi r17 , 67
+    call show_char
+    
+    ldi r16 , 't'
+    ldi r17 , 68
+    call show_char
+
+    ////////////////
+    mov r16 , r22 // get back
+    ldi r17, 0
+    ret
+    
+print_play:
+    
+    mov r22 , r16
+    ////////////////
+    ldi r16 , 'p'
+    ldi r17 , 64
+    call show_char
+    
+    ldi r16 , 'l'
+    ldi r17 , 65
+    call show_char
+    
+    ldi r16 , 'a'
+    ldi r17 , 66
+    call show_char
+    
+    ldi r16 , 'y'
+    ldi r17 , 67
+    call show_char
+    
+    ldi r16 , ' '
+    ldi r17 , 68
+    call show_char
+
+    ////////////////
+    mov r16 , r22 // get back
+    ldi r17, 0
+    ret
+    
+print_stop:
+    
+    mov r22 , r16
+    ////////////////
+    ldi r16 , 's'
+    ldi r17 , 64
+    call show_char
+    
+    ldi r16 , 't'
+    ldi r17 , 65
+    call show_char
+    
+    ldi r16 , 'o'
+    ldi r17 , 66
+    call show_char
+    
+    ldi r16 , 'p'
+    ldi r17 , 67
+    call show_char
+    
+    ldi r16 , ' '
+    ldi r17 , 68
+    call show_char
+
+    ////////////////
+    mov r16 , r22 // get back
+    ldi r17, 0
+    ret
 
 init_button:
     
@@ -135,7 +348,6 @@ init_button:
     sts ADMUX, r16
 
     pop r16
-    
     ret
     
 init_int:            ; 5
